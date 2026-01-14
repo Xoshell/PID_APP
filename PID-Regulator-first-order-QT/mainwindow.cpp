@@ -43,8 +43,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->lblError->setStyleSheet("color: red;");
 
     //load image
-    ui->lblEquation->setPixmap(QPixmap("C:/Users/lukas/Documents/pid/equationLATEX/equation.png"));
-    ui->lblEquation->setScaledContents(true); // scales nicely
+    ui->lblEquation->setPixmap(QPixmap(":/images/equation.png"));
+    ui->lblEquation->setScaledContents(true);
 
 
     connect(&timer, &QTimer::timeout, this, &MainWindow::updateSimulation);
