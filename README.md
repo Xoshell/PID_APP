@@ -32,15 +32,18 @@ Cieľom projektu bolo implementovať funkčný PID simulátor v jazyku C++ s GUI
 ### Qt klient
 
 1. Otvorte projekt v **Qt Creator**  
-2. Skontrolujte `.pro` súbor:
+2. Do súboru `.pro` priložíme knižnice:
 
 ```pro
-QT += widgets network
+QT += widgets printsupport network
+
 CONFIG += c++11
 ```
+
 ### TCP Server
 
 Nachádza sa v priečinku TPCServer, a obsahuje knižnicu [json.hpp](https://github.com/nlohmann/json) pre ukladanie dát od klienta v súbore `.json`.
 Taktiež sa tu nachádza zdrojový kód `server.cpp` pre jeho kompiláciu musíme priložit knižnicu Winsock2:
 
 ``` g++ server.cpp -o server.exe -lws2_32 -std=c++11 ```
+
