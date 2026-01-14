@@ -1,6 +1,6 @@
 # PID Simulator
 
-![PID Simulator Screenshot](screenshot_pid_simulator.png)
+![PID Simulator Screenshot](screenshot.png)
 
 **Popis projektu:**  
 Aplikácia simuluje PID regulátor nad systémom 1. rádu s grafickým zobrazením výstupov v reálnom čase.  
