@@ -27,13 +27,18 @@ Cieľom projektu bolo implementovať funkčný PID simulátor v jazyku C++ s GUI
 
 ---
 
-## Štruktúra projektu
+## Kompilácia a spustenie
 
-/PID-Regulator-first-order-QT
-│-- main.cpp
-│-- mainwindow.h
-│-- mainwindow.cpp
-│-- mainwindow.ui
-│-- pid.pro
-│-- qcustomplot.cpp
-│-- qcustomplot.h
+### Qt klient
+
+1. Otvorte projekt v **Qt Creator**  
+2. Skontrolujte `.pro` súbor:
+
+```pro
+QT += widgets network
+CONFIG += c++11
+
+### Qt klient
+
+```
+g++ server.cpp -o server.exe -lws2_32 -std=c++11
