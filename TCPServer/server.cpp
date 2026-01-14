@@ -1,105 +1,87 @@
-#include <iostream>
-#include <thread>
-#include <vector>
-#include <ctime>
-#include <fstream>
-#include <string>
-
-#ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#pragma comment(lib,"ws2_32.lib")
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-typedef int SOCKET;
-#define INVALID_SOCKET -1
-#define SOCKET_ERROR -1
-#define closesocket close
-#endif
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <ctime>
+#include "json.hpp"  // nlohmann/json, header-only: https://github.com/nlohmann/json
 
-#define PORT 12345
-#define BUFFER_SIZE 1024
+#pragma comment(lib, "Ws2_32.lib")
 
-void handleClient(SOCKET clientSocket)
-{
-    char buffer[BUFFER_SIZE];
-    int bytesReceived = recv(clientSocket, buffer, BUFFER_SIZE - 1, 0);
-    if (bytesReceived > 0) {
-        buffer[bytesReceived] = '\0'; // nul-terminate
-        // získať aktuálny čas
-        std::time_t t = std::time(nullptr);
-        std::tm tm;
-#ifdef _WIN32
-        localtime_s(&tm, &t);
-#else
-        localtime_r(&t, &tm);
-#endif
-        char timestamp[64];
-        std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d_%H-%M-%S", &tm);
+using json = nlohmann::json;
 
-        std::string filename = std::string(timestamp) + ".json";
-
-        std::ofstream file(filename);
-        if (file.is_open()) {
-            file << buffer;
-            file.close();
-            std::cout << "Saved client data to " << filename << std::endl;
-        }
-    }
-
-    closesocket(clientSocket);
-}
-
-int main()
-{
-#ifdef _WIN32
+int main() {
+    // Inicializácia Winsock
     WSADATA wsaData;
-    WSAStartup(MAKEWORD(2,2), &wsaData);
-#endif
-
-    SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (listenSocket == INVALID_SOCKET) {
-        std::cerr << "Failed to create socket.\n";
+    if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
+        std::cerr << "WSAStartup failed\n";
         return 1;
     }
 
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-    serverAddr.sin_port = htons(PORT);
+    SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listenSocket == INVALID_SOCKET) {
+        std::cerr << "Cannot create socket\n";
+        WSACleanup();
+        return 1;
+    }
 
-    if (bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-        std::cerr << "Bind failed.\n";
+    sockaddr_in service;
+    service.sin_family = AF_INET;
+    service.sin_addr.s_addr = INADDR_ANY;
+    service.sin_port = htons(12345);
+
+    if (bind(listenSocket, (SOCKADDR*)&service, sizeof(service)) == SOCKET_ERROR) {
+        std::cerr << "Bind failed\n";
+        closesocket(listenSocket);
+        WSACleanup();
         return 1;
     }
 
     if (listen(listenSocket, 5) == SOCKET_ERROR) {
-        std::cerr << "Listen failed.\n";
+        std::cerr << "Listen failed\n";
+        closesocket(listenSocket);
+        WSACleanup();
         return 1;
     }
 
-    std::cout << "Server listening on port " << PORT << "...\n";
-
-    std::vector<std::thread> threads;
+    std::cout << "Server running on port 12345...\n";
 
     while (true) {
-        sockaddr_in clientAddr;
-        socklen_t clientSize = sizeof(clientAddr);
-        SOCKET clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &clientSize);
-        if (clientSocket != INVALID_SOCKET) {
-            threads.emplace_back(handleClient, clientSocket);
+        SOCKET clientSocket = accept(listenSocket, nullptr, nullptr);
+        if (clientSocket == INVALID_SOCKET) continue;
+
+        char buffer[4096] = {0};
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesReceived > 0) {
+            try {
+                json j = json::parse(buffer);
+
+                // vytvorenie nazvu suboru podla casu
+                std::time_t t = std::time(nullptr);
+                std::tm tm;
+
+                #ifdef _MSC_VER
+                    localtime_s(&tm, &t); // MSVC
+                #else
+                    tm = *std::localtime(&t); // MinGW / GCC
+                #endif
+
+                char filename[100];
+                std::strftime(filename, sizeof(filename), "pid_%Y-%m-%d_%H-%M-%S.json", &tm);
+
+                std::ofstream file(filename);
+                file << j.dump(4); // zapis pekne naformátovaný JSON
+                file.close();
+
+                std::cout << "Received and saved: " << filename << "\n";
+            } catch (...) {
+                std::cerr << "Error parsing JSON\n";
+            }
         }
+        closesocket(clientSocket);
     }
 
-    // join threads (v praxi sa tu nedostaneme, lebo server beží donekonečna)
-    for (auto &t : threads) t.join();
-
-#ifdef _WIN32
+    closesocket(listenSocket);
     WSACleanup();
-#endif
-
     return 0;
 }
