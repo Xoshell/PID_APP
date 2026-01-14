@@ -40,5 +40,5 @@ CONFIG += c++11
 
 ### Qt klient
 
-```
-g++ server.cpp -o server.exe -lws2_32 -std=c++11
+
+``` g++ server.cpp -o server.exe -lws2_32 -std=c++11
